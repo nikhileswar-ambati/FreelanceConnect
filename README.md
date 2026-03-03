@@ -4,7 +4,7 @@
 ## Team Details
 
 <details>
-  <summary>Meet The Team</summary>
+  <summary>Details</summary>
 
 - **A.D.L.Nikhileswar** (241CS207) - [ambatidurgalaxmi.241cs207@nitk.edu.in](mailto:ambatidurgalaxmi.241cs207@nitk.edu.in)  
 - **Billa Adithya Vardhan Rao** (241CS217) - [adithya.241cs217@nitk.edu.in](mailto:adithya.241cs217@nitk.edu.in)  
