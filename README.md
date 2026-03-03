@@ -8,7 +8,7 @@
 
 - **A.D.L.Nikhileswar** (241CS207) - [ambatidurgalaxmi.241cs207@nitk.edu.in](mailto:ambatidurgalaxmi.241cs207@nitk.edu.in)  
 - **Billa Adithya Vardhan Rao** (241CS217) - [.241cs217@nitk.edu.in](mailto:.241cs217@nitk.edu.in)  
-- **M Keerthana** (241CS237) - [.241cs237@nitk.edu.in](mailto:.241cs237@nitk.edu.in)  
+- **M Keerthana** (241CS237) - [keerthana.241cs237@nitk.edu.in](mailto:keerthana.241cs237@nitk.edu.in)  
 - **P Mokshagna** (241CS24) - [.241cs24@nitk.edu.in](mailto:.241cs24@nitk.edu.in)  
 
 </details>  
