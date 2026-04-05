@@ -4,7 +4,7 @@
 ## Team Details
 
 <details>
-  <summary>Details</summary>
+  <summary>Meet the team</summary>
 
 - **A.D.L.Nikhileswar** (241CS207) - [ambatidurgalaxmi.241cs207@nitk.edu.in](mailto:ambatidurgalaxmi.241cs207@nitk.edu.in)  
 - **Billa Adithya Vardhan Rao** (241CS217) - [adithya.241cs217@nitk.edu.in](mailto:adithya.241cs217@nitk.edu.in)  
@@ -19,7 +19,8 @@ The platform is designed to connect customers who require local services with fr
 
 ## Features
 
-### 1. User Registration & Profile Management
+<details>
+<summary><b>1. User Registration & Profile Management</b></summary>
 - Users can register as **Freelancers** or **Customers**.
 - Freelancers can create detailed profiles including:
   - Skills
@@ -28,16 +29,20 @@ The platform is designed to connect customers who require local services with fr
   - Availability
 - Customers can manage profiles and request services.
 - Secure authentication with encrypted password storage.
+</details>
 
-### 2. Freelancer Discovery & Search
+<details>
+<summary><b>2. Freelancer Discovery & Search</b></summary>
 - Customers can search freelancers based on:
   - Location
   - Skills
   - Availability
   - Price range
 - Efficient filtering using optimized SQL queries.
+</details>
 
-### 3. Booking & Service Management
+<details>
+<summary><b>3. Booking & Service Management</b></summary>
 - Customers can send **service booking requests**.
 - Freelancers can **accept or reject** requests.
 - Booking workflow includes:
@@ -46,16 +51,21 @@ The platform is designed to connect customers who require local services with fr
   - Completed
   - Rejected
 - Prevents overlapping bookings through availability validation.
+</details>
 
-### 4. Review & Rating System
+<details>
+<summary><b>4. Review & Rating System</b></summary>
 - Customers can rate freelancers after completed services.
 - Reviews help build trust between users.
 - Maintains service quality and transparency.
+</details>
 
-### 5. Secure Authentication & Data Management
+<details>
+<summary><b>5. Secure Authentication & Data Management</b></summary>
 - JWT-based authentication.
 - Password hashing for security.
 - Data validation using backend logic and database constraints.
+</details>
 
 ## Tech Stack
 
