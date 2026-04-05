@@ -14,8 +14,48 @@
 </details>  
 
 ## Introduction
+Our project aims to develop a comprehensive local freelancing platform called Freelance Connect, using React for front-end development and Node.js with Express for backend services, with MySQL as the core database management system. 
+The platform is designed to connect customers who require local services with freelancers who provide various skills and services within the same locality.
 
 ## Features
+
+### 1. User Registration & Profile Management
+- Users can register as **Freelancers** or **Customers**.
+- Freelancers can create detailed profiles including:
+  - Skills
+  - Experience
+  - Pricing
+  - Availability
+- Customers can manage profiles and request services.
+- Secure authentication with encrypted password storage.
+
+### 2. Freelancer Discovery & Search
+- Customers can search freelancers based on:
+  - Location
+  - Skills
+  - Availability
+  - Price range
+- Efficient filtering using optimized SQL queries.
+
+### 3. Booking & Service Management
+- Customers can send **service booking requests**.
+- Freelancers can **accept or reject** requests.
+- Booking workflow includes:
+  - Requested
+  - Accepted
+  - Completed
+  - Rejected
+- Prevents overlapping bookings through availability validation.
+
+### 4. Review & Rating System
+- Customers can rate freelancers after completed services.
+- Reviews help build trust between users.
+- Maintains service quality and transparency.
+
+### 5. Secure Authentication & Data Management
+- JWT-based authentication.
+- Password hashing for security.
+- Data validation using backend logic and database constraints.
 
 ## Tech Stack
 
