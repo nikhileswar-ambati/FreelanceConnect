@@ -15,6 +15,7 @@
 
 ## Introduction
 Our project aims to develop a comprehensive local freelancing platform called Freelance Connect, using React for front-end development and Node.js with Express for backend services, with MySQL as the core database management system. 
+
 The platform is designed to connect customers who require local services with freelancers who provide various skills and services within the same locality.
 
 ## Features
