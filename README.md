@@ -237,8 +237,6 @@ Customers can rate freelancers after successful booking completion.
 
 ## Screenshots
 
-## Screenshots
-
 ### 🏠 Home Page
 ![Home](./screenshots/home.jpeg)
 
