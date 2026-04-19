@@ -106,7 +106,7 @@ npm install
 Run the backend server:
 
 ```
-<ADD_BACKEND_RUN_COMMAND_HERE>
+npm start
 ```
 
 ---
@@ -121,7 +121,7 @@ npm install
 Run the frontend:
 
 ```
-<ADD_FRONTEND_RUN_COMMAND_HERE>
+npm run dev
 ```
 
 ---
@@ -135,7 +135,7 @@ Run the frontend:
 
 ## Database Setup
 
-1. Open MySQL / phpMyAdmin
+1. Open MySQL
 2. Create a new database:
 
 ```
