@@ -7,8 +7,9 @@ import { Input } from "@/components/common/Input";
 import { toast } from "@/components/common/Toast";
 import { Loader2, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatLocalDate, isFutureSlot } from "@/lib/dateTime";
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => formatLocalDate();
 
 const formatHour = (hour) => {
   const start = String(hour).padStart(2, "0");
@@ -68,6 +69,8 @@ const Availability = () => {
   }, [user?.freelancer_id, date]);
 
   const toggle = (hour) => {
+    if (!isFutureSlot(date, hour)) return;
+
     setSelected((current) =>
       current.includes(hour)
         ? current.filter((item) => item !== hour)
@@ -137,11 +140,13 @@ const Availability = () => {
             <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
               {Array.from({ length: 24 }, (_, hour) => {
                 const checked = selected.includes(hour);
+                const disabled = !isFutureSlot(date, hour);
                 return (
                   <label
                     key={hour}
                     className={cn(
-                      "flex h-12 cursor-pointer items-center justify-center rounded-lg border text-sm font-medium transition-colors",
+                      "flex h-12 items-center justify-center rounded-lg border text-sm font-medium transition-colors",
+                      disabled && "cursor-not-allowed bg-muted/50 text-muted-foreground/60",
                       checked
                         ? "border-primary bg-primary-soft text-primary"
                         : "border-border bg-card text-muted-foreground hover:text-foreground"
@@ -150,6 +155,7 @@ const Availability = () => {
                     <input
                       type="checkbox"
                       checked={checked}
+                      disabled={disabled}
                       onChange={() => toggle(hour)}
                       className="sr-only"
                     />

@@ -3,6 +3,7 @@ const AppError = require("../utils/AppError");
 const freelancerModel = require("../models/freelancerModel");
 const availabilityModel = require("../models/availabilityModel");
 const { requireFields, isValidDate, parsePagination } = require("../utils/validators");
+const { filterPastSlots, isPastDate, isPastSlot } = require("../utils/dateTime");
  
 // ─────────────────────────────────────────────
 // CREATE PROFILE
@@ -48,6 +49,9 @@ exports.setAvailability = asyncHandler(async (req, res) => {
     if (!isValidDate(date)) {
         throw new AppError("Invalid date format. Use YYYY-MM-DD.", 400);
     }
+    if (isPastDate(date)) {
+        throw new AppError("Cannot set availability for a past date.", 400);
+    }
     if (!Array.isArray(available_slots)) {
         throw new AppError("available_slots must be an array.", 400);
     }
@@ -59,6 +63,9 @@ exports.setAvailability = asyncHandler(async (req, res) => {
 
     if (invalid) {
         throw new AppError("available_slots must contain integers from 0 to 23.", 400);
+    }
+    if (normalizedSlots.some((hour) => isPastSlot(date, hour))) {
+        throw new AppError("Cannot set availability for past time slots.", 400);
     }
 
     await availabilityModel.setForDate({
@@ -98,7 +105,7 @@ exports.getAvailability = asyncHandler(async (req, res) => {
         date,
     });
 
-    res.json({ success: true, available_slots });
+    res.json({ success: true, available_slots: filterPastSlots(date, available_slots) });
 });
  
 // ─────────────────────────────────────────────
@@ -229,6 +236,6 @@ exports.getSchedule = asyncHandler(async (req, res) => {
         success: true,
         freelancer_id,
         date,
-        available_slots,
+        available_slots: filterPastSlots(date, available_slots),
     });
 });

@@ -6,8 +6,9 @@ import { freelancerApi, bookingApi } from "@/services/api";
 import { toast } from "@/components/common/Toast";
 import { Calendar, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { filterPastHours, formatLocalDate } from "@/lib/dateTime";
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => formatLocalDate();
 
 const formatHour = (hour) => {
   const start = String(hour).padStart(2, "0");
@@ -33,7 +34,9 @@ export const BookingModal = ({ open, onClose, freelancer, onBooked }) => {
     setLoadingSlots(true);
     freelancerApi
       .getAvailability(freelancer.freelancer_id, { date })
-      .then((response) => setAvailableSlots(response.available_slots || []))
+      .then((response) =>
+        setAvailableSlots(filterPastHours(response.available_slots || [], date))
+      )
       .catch(() => setAvailableSlots([]))
       .finally(() => setLoadingSlots(false));
   }, [open, date, freelancer?.freelancer_id]);

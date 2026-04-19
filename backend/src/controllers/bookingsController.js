@@ -2,6 +2,7 @@ const asyncHandler = require("../utils/asyncHandler");
 const AppError = require("../utils/AppError");
 const bookingModel = require("../models/bookingModel");
 const { requireFields, isValidTime, isValidDate } = require("../utils/validators");
+const { isPastDate, isPastSlot } = require("../utils/dateTime");
  
 const VALID_STATUSES = ["pending", "accepted", "completed", "rejected", "cancelled"];
  
@@ -29,8 +30,11 @@ exports.create = asyncHandler(async (req, res) => {
     }
 
     // Prevent past-date bookings
-    if (new Date(requested_date) < new Date(new Date().toDateString())) {
+    if (isPastDate(requested_date)) {
         throw new AppError("Cannot create a booking for a past date.", 400);
+    }
+    if (times.some((time) => isPastSlot(requested_date, Number(String(time).split(":")[0])))) {
+        throw new AppError("Cannot create a booking for a past time slot.", 400);
     }
 
     if (max_price !== undefined && (isNaN(max_price) || Number(max_price) < 0)) {
@@ -249,17 +253,22 @@ exports.cancel = asyncHandler(async (req, res) => {
 // COMPLETE
 // ─────────────────────────────────────────────
 exports.complete = asyncHandler(async (req, res) => {
-    const booking = await bookingModel.getById(req.params.id);
-    if (!booking) throw new AppError("Booking request not found.", 404);
- 
-    if (booking.status !== "accepted") {
-        throw new AppError("Only accepted bookings can be marked as completed.", 400);
+    try {
+        await bookingModel.markCompleted(
+            parseInt(req.params.id, 10),
+            req.user.freelancer_id
+        );
+    } catch (err) {
+        if (err.message === "NOT_FOUND") throw new AppError("Booking request not found.", 404);
+        if (err.message === "INVALID_STATUS") {
+            throw new AppError("Only accepted bookings can be marked as completed.", 400);
+        }
+        if (err.message === "UNAUTHORIZED") {
+            throw new AppError("Unauthorized. You can only complete your own bookings.", 403);
+        }
+        throw err;
     }
-    if (booking.freelancer_id !== req.user.freelancer_id) {
-        throw new AppError("Unauthorized. You can only complete your own bookings.", 403);
-    }
- 
-    await bookingModel.updateStatus(req.params.id, "completed");
+
     res.json({ success: true, message: "Booking marked as completed." });
 });
  

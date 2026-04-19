@@ -6,6 +6,7 @@ import { Button } from "@/components/common/Button";
 import { Input } from "@/components/common/Input";
 import { Modal } from "@/components/common/Modal";
 import { ReviewStars } from "@/components/freelancer/ReviewStars";
+import { BookingTimeline } from "@/components/booking/BookingTimeline";
 import { toast } from "@/components/common/Toast";
 import {
   Calendar,
@@ -16,6 +17,11 @@ import {
   Sparkles,
   XCircle,
 } from "lucide-react";
+import {
+  formatDisplayDate,
+  formatDisplayDateTime,
+  formatRequestedSlots,
+} from "@/lib/dateTime";
 
 const FreelancerDashboard = () => {
   const { user } = useAuth();
@@ -261,13 +267,14 @@ const JobRow = ({ booking, onUpdated }) => {
           <div className="mt-3 flex flex-wrap gap-4 text-sm text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">
               <Calendar className="h-4 w-4" />
-              {booking.requested_date}
+              {formatDisplayDate(booking.booked_date || booking.requested_date)}
             </span>
 
             <span className="inline-flex items-center gap-1.5">
               <Clock className="h-4 w-4" />
-              {booking.requested_time}
+              {formatRequestedSlots(booking.requested_times)}
             </span>
+            <span>Requested: {formatDisplayDateTime(booking.requested_at || booking.requested_on)}</span>
           </div>
         </div>
 
@@ -292,17 +299,20 @@ const JobRow = ({ booking, onUpdated }) => {
         title="Booking request"
       >
         <div className="space-y-5">
+          <BookingTimeline booking={booking} />
+
           <div className="grid sm:grid-cols-2 gap-3 text-sm">
             <Detail label="customer_name" value={booking.customer_name} />
             <Detail label="customer_id" value={booking.customer_id} />
-            <Detail label="requested_date" value={booking.requested_date} />
-            <Detail label="requested_time" value={booking.requested_time} />
+            <Detail label="service_date" value={formatDisplayDate(booking.booked_date || booking.requested_date)} />
+            <Detail label="booking_id" value={booking.booking_id} />
             <Detail label="status" value={booking.status} />
             <Detail label="max_price" value={booking.max_price} />
             <Detail
               label="freelancer_proposed_price"
               value={booking.freelancer_proposed_price}
             />
+            <Detail label="final_price" value={booking.final_price} />
           </div>
 
           <Detail label="requirements" value={booking.requirements} />
@@ -389,7 +399,7 @@ const ReviewsModal = ({ open, onClose, reviews, sort, onSortChange }) => (
                 <ReviewStars rating={review.rating} />
               </div>
               <p className="mt-2 text-sm text-muted-foreground">{review.comments}</p>
-              <p className="mt-2 text-xs text-muted-foreground">{review.review_date}</p>
+              <p className="mt-2 text-xs text-muted-foreground">{formatDisplayDateTime(review.review_date)}</p>
             </div>
           ))}
         </div>

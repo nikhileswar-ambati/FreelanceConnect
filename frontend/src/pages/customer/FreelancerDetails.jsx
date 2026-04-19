@@ -13,6 +13,7 @@ import { ReviewStars } from "@/components/freelancer/ReviewStars";
 import { Button } from "@/components/common/Button";
 import { Badge } from "@/components/common/Badge";
 import { BookingModal } from "@/components/booking/BookingModal";
+import { formatDisplayDateTime } from "@/lib/dateTime";
 
 const FreelancerDetails = () => {
   const { id } = useParams();
@@ -163,7 +164,7 @@ const FreelancerDetails = () => {
                       </p>
 
                       <p className="text-xs text-muted-foreground mt-2">
-                        {review.review_date}
+                        {formatDisplayDateTime(review.review_date)}
                       </p>
                     </div>
                   ))}

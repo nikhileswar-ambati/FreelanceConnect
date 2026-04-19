@@ -7,8 +7,15 @@ import { Button } from "@/components/common/Button";
 import { Modal } from "@/components/common/Modal";
 import { Input, Textarea } from "@/components/common/Input";
 import { ReviewStars } from "@/components/freelancer/ReviewStars";
+import { BookingTimeline } from "@/components/booking/BookingTimeline";
 import { toast } from "@/components/common/Toast";
 import { Calendar, Clock, Inbox, Loader2, Star } from "lucide-react";
+import {
+  formatDisplayDate,
+  formatDisplayDateTime,
+  formatDisplayTime,
+  formatRequestedSlots,
+} from "@/lib/dateTime";
 
 const CustomerDashboard = () => {
   const { user } = useAuth();
@@ -152,6 +159,7 @@ const CustomerDashboard = () => {
 const BookingRow = ({ booking, onCancel, onReview, onUpdated }) => {
   const [price, setPrice] = useState("");
   const [saving, setSaving] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   const sendPrice = async () => {
     setSaving(true);
@@ -191,15 +199,14 @@ const BookingRow = ({ booking, onCancel, onReview, onUpdated }) => {
           <div className="mt-3 flex flex-wrap gap-4 text-sm text-muted-foreground">
             <span className="flex items-center gap-1">
               <Calendar className="h-4 w-4" />
-              {booking.requested_date}
+              {formatDisplayDate(booking.booked_date || booking.requested_date)}
             </span>
 
             <span className="flex items-center gap-1">
               <Clock className="h-4 w-4" />
-              {booking.requested_time}
+              {formatRequestedSlots(booking.requested_times)}
             </span>
-            <span>max_price: {booking.max_price}</span>
-            <span>freelancer_proposed_price: {booking.freelancer_proposed_price}</span>
+            <span>Requested: {formatDisplayDateTime(booking.requested_at || booking.requested_on)}</span>
           </div>
         </div>
 
@@ -207,6 +214,9 @@ const BookingRow = ({ booking, onCancel, onReview, onUpdated }) => {
           <StatusBadge status={booking.status} />
 
           <div className="flex flex-wrap justify-end gap-2">
+            <Button size="sm" variant="outline" onClick={() => setDetailsOpen(true)}>
+              View details
+            </Button>
             {booking.status === "pending" && (
               <>
                 <Input
@@ -232,16 +242,42 @@ const BookingRow = ({ booking, onCancel, onReview, onUpdated }) => {
             )}
 
             {booking.status === "completed" && (
-              <Button size="sm" onClick={onReview}>
+              <Button size="sm" onClick={onReview} disabled={!!booking.review_id}>
                 <Star className="h-4 w-4" /> Review
               </Button>
             )}
           </div>
         </div>
       </div>
+
+      <Modal open={detailsOpen} onClose={() => setDetailsOpen(false)} title="Booking details">
+        <div className="space-y-5">
+          <BookingTimeline booking={booking} />
+          <div className="grid sm:grid-cols-2 gap-3 text-sm">
+            <Detail label="freelancer" value={booking.freelancer_name} />
+            <Detail label="skill" value={booking.freelancer_skill} />
+            <Detail label="status" value={booking.status} />
+            <Detail label="booking_id" value={booking.booking_id} />
+            <Detail label="max_price" value={booking.max_price} />
+            <Detail label="freelancer_proposed_price" value={booking.freelancer_proposed_price} />
+            <Detail label="final_price" value={booking.final_price} />
+            <Detail label="primary_slot" value={formatDisplayTime(booking.booked_time || booking.requested_time)} />
+          </div>
+          <Detail label="requirements" value={booking.requirements} />
+        </div>
+      </Modal>
     </div>
   );
 };
+
+const Detail = ({ label, value }) => (
+  <div className="rounded-lg border border-border bg-muted/30 p-3">
+    <div className="text-xs text-muted-foreground">{label}</div>
+    <div className="mt-1 text-sm font-medium text-foreground break-words">
+      {value || "-"}
+    </div>
+  </div>
+);
 
 const ReviewModal = ({ booking, onClose, onSubmitted }) => {
   const [rating, setRating] = useState("");

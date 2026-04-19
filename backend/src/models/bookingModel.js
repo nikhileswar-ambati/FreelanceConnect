@@ -3,6 +3,7 @@ const availabilityModel = require("./availabilityModel");
 
 let negotiationColumnReady = false;
 let timeSlotsTableReady = false;
+let bookingAuditColumnsReady = false;
 
 const ensureNegotiationColumn = async () => {
     if (negotiationColumnReady) return;
@@ -52,6 +53,87 @@ const ensureTimeSlotsTable = async () => {
     timeSlotsTableReady = true;
 };
 
+const ensureBookingAuditColumns = async () => {
+    if (bookingAuditColumnsReady) return;
+
+    const [requestColumns] = await pool.execute(
+        `SELECT COLUMN_NAME
+         FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = 'booking_request'
+           AND COLUMN_NAME IN ('requested_at', 'completed_at')`
+    );
+
+    const requestColumnNames = new Set(requestColumns.map((column) => column.COLUMN_NAME));
+
+    if (!requestColumnNames.has("requested_at")) {
+        await pool.execute(
+            `ALTER TABLE booking_request
+             ADD COLUMN requested_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP`
+        );
+    }
+
+    if (!requestColumnNames.has("completed_at")) {
+        await pool.execute(
+            `ALTER TABLE booking_request
+             ADD COLUMN completed_at TIMESTAMP NULL DEFAULT NULL`
+        );
+    }
+
+    const [bookingColumns] = await pool.execute(
+        `SELECT COLUMN_NAME
+         FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = 'booking'
+           AND COLUMN_NAME = 'accepted_at'`
+    );
+
+    if (bookingColumns.length === 0) {
+        await pool.execute(
+            `ALTER TABLE booking
+             ADD COLUMN accepted_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP`
+        );
+    }
+
+    bookingAuditColumnsReady = true;
+};
+
+const attachRequestedTimes = async (rows) => {
+    if (!rows || rows.length === 0) return rows || [];
+
+    try {
+        const requestIds = rows.map((row) => row.request_id);
+        const placeholders = requestIds.map(() => "?").join(",");
+        const [slotRows] = await pool.execute(
+            `SELECT request_id, slot_hour FROM booking_request_time_slots
+             WHERE request_id IN (${placeholders})
+             ORDER BY request_id, slot_hour`,
+            requestIds
+        );
+
+        const slotsByRequest = {};
+        if (slotRows && slotRows.length > 0) {
+            slotRows.forEach((slot) => {
+                if (!slotsByRequest[slot.request_id]) {
+                    slotsByRequest[slot.request_id] = [];
+                }
+                slotsByRequest[slot.request_id].push(slot.slot_hour);
+            });
+        }
+
+        rows.forEach((row) => {
+            row.requested_times = slotsByRequest[row.request_id]
+                || [Number(String(row.requested_time || "0:00").split(":")[0])];
+        });
+    } catch (err) {
+        rows.forEach((row) => {
+            row.requested_times = [Number(String(row.requested_time || "0:00").split(":")[0])];
+        });
+    }
+
+    return rows;
+};
+
 exports.checkAvailability = async (freelancer_id, requested_date, requested_times) => {
     try {
         // Support both single time and array of times
@@ -93,6 +175,7 @@ exports.createRequest = async ({
 }) => {
     await ensureNegotiationColumn();
     await ensureTimeSlotsTable();
+    await ensureBookingAuditColumns();
     await availabilityModel.ensureUniqueIndex();
 
     // Support both single time and array
@@ -129,8 +212,8 @@ exports.createRequest = async ({
         const [res] = await conn.execute(
             `INSERT INTO booking_request
              (customer_id, freelancer_id, requested_date, requested_time,
-              max_price, requirements, requested_on, status)
-             VALUES (?, ?, ?, ?, ?, ?, CURRENT_DATE, 'pending')`,
+              max_price, requirements, requested_on, requested_at, status)
+             VALUES (?, ?, ?, ?, ?, ?, CURRENT_DATE, CURRENT_TIMESTAMP, 'pending')`,
             [customer_id, freelancer_id, requested_date, times[0], max_price || 0, requirements || ""]
         );
 
@@ -168,9 +251,17 @@ exports.createRequest = async ({
 exports.getById = async (id) => {
     try {
         await ensureNegotiationColumn();
+        await ensureBookingAuditColumns();
 
         const [rows] = await pool.execute(
             `SELECT br.*,
+                    b.booking_id,
+                    b.final_price,
+                    b.booked_date,
+                    b.booked_time,
+                    b.accepted_on,
+                    b.accepted_at,
+                    r.review_id,
                     uc.name AS customer_name,
                     uf.name AS freelancer_name,
                     fs.skill_name AS freelancer_skill
@@ -180,6 +271,8 @@ exports.getById = async (id) => {
              LEFT JOIN freelancer_profile fp ON br.freelancer_id = fp.freelancer_id
              LEFT JOIN user uf ON fp.user_id = uf.user_id
              LEFT JOIN freelancer_skill fs ON fp.skill_id = fs.skill_id
+             LEFT JOIN booking b ON br.request_id = b.request_id
+             LEFT JOIN review r ON b.booking_id = r.booking_id
              WHERE br.request_id = ?`,
             [id]
         );
@@ -188,22 +281,7 @@ exports.getById = async (id) => {
 
         const booking = rows[0];
 
-        // Try to get time slots
-        try {
-            const [slotRows] = await pool.execute(
-                `SELECT slot_hour FROM booking_request_time_slots
-                 WHERE request_id = ?
-                 ORDER BY slot_hour`,
-                [id]
-            );
-
-            booking.requested_times = (slotRows && slotRows.length > 0) 
-                ? slotRows.map(row => row.slot_hour)
-                : [Number(String(booking.requested_time || "0:00").split(":")[0])];
-        } catch (err) {
-            // Table might not exist yet
-            booking.requested_times = [Number(String(booking.requested_time || "0:00").split(":")[0])];
-        }
+        await attachRequestedTimes([booking]);
 
         return booking;
     } catch (error) {
@@ -215,65 +293,41 @@ exports.getById = async (id) => {
 exports.getAll = async () => {
     try {
         await ensureNegotiationColumn();
+        await ensureBookingAuditColumns();
 
         const [rows] = await pool.execute(
             `SELECT
                br.request_id,
                br.freelancer_id,
                br.customer_id,
+               br.requested_on,
+               br.requested_at,
+               br.completed_at,
                br.requested_date,
                br.requested_time,
                br.max_price,
                br.freelancer_proposed_price,
                br.requirements,
                br.status,
+               b.booking_id,
+               b.final_price,
+               b.booked_date,
+               b.booked_time,
+               b.accepted_on,
+               b.accepted_at,
+               r.review_id,
                u.name AS customer_name,
                fs.skill_name AS freelancer_skill
              FROM booking_request br
              LEFT JOIN customer c ON br.customer_id = c.customer_id
              LEFT JOIN user u ON c.user_id = u.user_id
              LEFT JOIN freelancer_profile fp ON br.freelancer_id = fp.freelancer_id
-             LEFT JOIN freelancer_skill fs ON fp.skill_id = fs.skill_id`
+             LEFT JOIN freelancer_skill fs ON fp.skill_id = fs.skill_id
+             LEFT JOIN booking b ON br.request_id = b.request_id
+             LEFT JOIN review r ON b.booking_id = r.booking_id`
         );
 
-        if (!rows || rows.length === 0) return rows || [];
-
-        // Try to get time slots
-        try {
-            const requestIds = rows.map(row => row.request_id);
-            const placeholders = requestIds.map(() => '?').join(',');
-            
-            const [slotRows] = await pool.execute(
-                `SELECT request_id, slot_hour FROM booking_request_time_slots
-                 WHERE request_id IN (${placeholders})
-                 ORDER BY request_id, slot_hour`,
-                requestIds
-            );
-
-            // Group slots by request_id
-            const slotsByRequest = {};
-            if (slotRows && slotRows.length > 0) {
-                slotRows.forEach(slot => {
-                    if (!slotsByRequest[slot.request_id]) {
-                        slotsByRequest[slot.request_id] = [];
-                    }
-                    slotsByRequest[slot.request_id].push(slot.slot_hour);
-                });
-            }
-
-            // Add slots to each booking
-            rows.forEach(row => {
-                row.requested_times = slotsByRequest[row.request_id] || 
-                    [Number(String(row.requested_time || "0:00").split(':')[0])];
-            });
-        } catch (err) {
-            // Table might not exist yet, fall back to single time
-            rows.forEach(row => {
-                row.requested_times = [Number(String(row.requested_time || "0:00").split(':')[0])];
-            });
-        }
-
-        return rows;
+        return attachRequestedTimes(rows);
     } catch (error) {
         console.error("getAll error:", error);
         return [];
@@ -283,67 +337,42 @@ exports.getAll = async () => {
 exports.getByCustomer = async (customer_id) => {
     try {
         await ensureNegotiationColumn();
+        await ensureBookingAuditColumns();
 
         const [rows] = await pool.execute(
             `SELECT
                br.request_id,
                br.freelancer_id,
                br.customer_id,
+               br.requested_on,
+               br.requested_at,
+               br.completed_at,
                br.requested_date,
                br.requested_time,
                br.max_price,
                br.freelancer_proposed_price,
                br.requirements,
                br.status,
+               b.booking_id,
+               b.final_price,
+               b.booked_date,
+               b.booked_time,
+               b.accepted_on,
+               b.accepted_at,
+               r.review_id,
                u.name AS freelancer_name,
                fs.skill_name AS freelancer_skill
              FROM booking_request br
              LEFT JOIN freelancer_profile fp ON br.freelancer_id = fp.freelancer_id
              LEFT JOIN user u ON fp.user_id = u.user_id
              LEFT JOIN freelancer_skill fs ON fp.skill_id = fs.skill_id
+             LEFT JOIN booking b ON br.request_id = b.request_id
+             LEFT JOIN review r ON b.booking_id = r.booking_id
              WHERE br.customer_id = ?`,
             [customer_id]
         );
 
-        if (!rows || rows.length === 0) return rows || [];
-
-        // Try to get time slots
-        try {
-            const requestIds = rows.map(row => row.request_id);
-            if (requestIds.length > 0) {
-                const placeholders = requestIds.map(() => '?').join(',');
-                const [slotRows] = await pool.execute(
-                    `SELECT request_id, slot_hour FROM booking_request_time_slots
-                     WHERE request_id IN (${placeholders})
-                     ORDER BY request_id, slot_hour`,
-                    requestIds
-                );
-
-                // Group slots by request_id
-                const slotsByRequest = {};
-                if (slotRows && slotRows.length > 0) {
-                    slotRows.forEach(slot => {
-                        if (!slotsByRequest[slot.request_id]) {
-                            slotsByRequest[slot.request_id] = [];
-                        }
-                        slotsByRequest[slot.request_id].push(slot.slot_hour);
-                    });
-                }
-
-                // Add slots to each booking
-                rows.forEach(row => {
-                    row.requested_times = slotsByRequest[row.request_id] || 
-                        [Number(String(row.requested_time || "0:00").split(':')[0])];
-                });
-            }
-        } catch (err) {
-            // Table might not exist yet, fall back to single time
-            rows.forEach(row => {
-                row.requested_times = [Number(String(row.requested_time || "0:00").split(':')[0])];
-            });
-        }
-
-        return rows;
+        return attachRequestedTimes(rows);
     } catch (error) {
         console.error("getByCustomer error:", error);
         return [];
@@ -353,6 +382,7 @@ exports.getByCustomer = async (customer_id) => {
 exports.getByStatus = async (status) => {
     try {
         await ensureNegotiationColumn();
+        await ensureBookingAuditColumns();
 
         const [rows] = await pool.execute(
             `SELECT br.*,
@@ -454,6 +484,7 @@ exports.updateFreelancerProposedPrice = async (id, freelancerId, proposedPrice) 
 exports.accept = async (requestId, freelancerId, finalPrice) => {
     try {
         await ensureNegotiationColumn();
+        await ensureBookingAuditColumns();
 
         const conn = await pool.getConnection();
         try {
@@ -478,6 +509,13 @@ exports.accept = async (requestId, freelancerId, finalPrice) => {
                 `INSERT INTO booking (request_id, freelancer_id, final_price, booked_date, booked_time, accepted_on)
                  VALUES (?, ?, ?, ?, ?, CURRENT_DATE)`,
                 [requestId, freelancerId, finalPrice, request.requested_date, request.requested_time]
+            );
+
+            await conn.execute(
+                `UPDATE booking
+                 SET accepted_at = CURRENT_TIMESTAMP
+                 WHERE request_id = ?`,
+                [requestId]
             );
 
             await conn.execute(
@@ -513,6 +551,36 @@ exports.getBookedSlots = async (freelancer_id, date) => {
     } catch (error) {
         console.error("getBookedSlots error:", error);
         return [];
+    }
+};
+
+exports.markCompleted = async (requestId, freelancerId) => {
+    const booking = await exports.getById(requestId);
+    if (!booking) throw new Error("NOT_FOUND");
+    if (booking.status !== "accepted") throw new Error("INVALID_STATUS");
+    if (booking.freelancer_id !== freelancerId) throw new Error("UNAUTHORIZED");
+
+    await ensureBookingAuditColumns();
+
+    const conn = await pool.getConnection();
+    try {
+        await conn.beginTransaction();
+
+        await conn.execute(
+            `UPDATE booking_request
+             SET status = 'completed',
+                 completed_at = CURRENT_TIMESTAMP
+             WHERE request_id = ?`,
+            [requestId]
+        );
+
+        await conn.commit();
+        return true;
+    } catch (err) {
+        await conn.rollback();
+        throw err;
+    } finally {
+        conn.release();
     }
 };
 

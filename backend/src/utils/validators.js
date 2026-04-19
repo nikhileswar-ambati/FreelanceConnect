@@ -17,7 +17,18 @@ const isValidTime = (val) => {
     );
 };
 /** Validates YYYY-MM-DD date format and actual calendar validity */
-const isValidDate = (val) => /^\d{4}-\d{2}-\d{2}$/.test(val) && !isNaN(Date.parse(val));
+const isValidDate = (val) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(val)) return false;
+
+    const [year, month, day] = val.split("-").map(Number);
+    const date = new Date(year, month - 1, day);
+
+    return (
+        date.getFullYear() === year &&
+        date.getMonth() === month - 1 &&
+        date.getDate() === day
+    );
+};
  
 /** Validates a positive integer (from query string or body) */
 const isPositiveInt = (val) => Number.isInteger(Number(val)) && Number(val) > 0;
