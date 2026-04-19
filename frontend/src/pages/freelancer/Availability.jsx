@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { freelancerApi } from "@/services/api";
 import { Button } from "@/components/common/Button";
@@ -22,6 +23,34 @@ const Availability = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+
+  // Check if user has a freelancer profile
+  if (!user?.freelancer_id) {
+    return (
+      <div className="bg-muted/30 min-h-[calc(100vh-4rem)]">
+        <div className="container py-8 md:py-12">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-foreground">Availability</h1>
+            <p className="text-muted-foreground mt-1">
+              Select the hours customers can book for a date.
+            </p>
+          </div>
+
+          <div className="bg-card border border-border rounded-2xl p-8 shadow-card text-center">
+            <h2 className="text-xl font-semibold text-foreground mb-4">
+              Create Your Freelancer Profile First
+            </h2>
+            <p className="text-muted-foreground mb-6">
+              You need to create a freelancer profile before you can set your availability.
+            </p>
+            <Button asChild>
+              <Link to="/freelancer/profile">Create Profile</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   useEffect(() => {
     if (!user?.freelancer_id || !date) return;
@@ -50,6 +79,13 @@ const Availability = () => {
     e.preventDefault();
     setSaving(true);
     setError(null);
+
+    // Double-check freelancer_id exists
+    if (!user?.freelancer_id) {
+      setError("Freelancer profile not found. Please create your profile first.");
+      setSaving(false);
+      return;
+    }
 
     try {
       await freelancerApi.setAvailability({

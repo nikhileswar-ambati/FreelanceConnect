@@ -10,61 +10,68 @@ const VALID_STATUSES = ["pending", "accepted", "completed", "rejected", "cancell
 // ─────────────────────────────────────────────
 exports.create = asyncHandler(async (req, res) => {
     // roleMiddleware ensures only 'customer' reaches here
-    const { requested_time, requested_date, freelancer_id, max_price, requirements } = req.body;
- 
-    requireFields(req.body, ["requested_time", "requested_date", "freelancer_id"]);
- 
-    if (!isValidTime(requested_time)) {
-        throw new AppError("Invalid time format. Use HH:MM:SS (e.g. 14:30:00).", 400);
+    const { requested_times, requested_date, freelancer_id, max_price, requirements } = req.body;
+
+    requireFields(req.body, ["requested_times", "requested_date", "freelancer_id"]);
+
+    // Support both single time and array of times for backward compatibility
+    const times = Array.isArray(requested_times) ? requested_times : [requested_times];
+
+    // Validate all times
+    for (const time of times) {
+        if (!isValidTime(time)) {
+            throw new AppError(`Invalid time format: ${time}. Use HH:MM:SS (e.g. 14:30:00).`, 400);
+        }
     }
+
     if (!isValidDate(requested_date)) {
         throw new AppError("Invalid date format. Use YYYY-MM-DD (e.g. 2025-06-15).", 400);
     }
- 
+
     // Prevent past-date bookings
     if (new Date(requested_date) < new Date(new Date().toDateString())) {
         throw new AppError("Cannot create a booking for a past date.", 400);
     }
- 
+
     if (max_price !== undefined && (isNaN(max_price) || Number(max_price) < 0)) {
         throw new AppError("max_price must be a non-negative number.", 400);
     }
- 
+
     const customer_id = req.user.customer_id;
     if (!customer_id) {
         throw new AppError("Customer profile not found. Please contact support.", 500);
     }
- 
-    // Check for conflicting accepted booking at this exact slot
+
+    // Check for conflicting accepted booking at any of the requested slots
     const conflicts = await bookingModel.checkAvailability(
         freelancer_id,
         requested_date,
-        requested_time
+        times
     );
     if (conflicts.length > 0) {
         throw new AppError(
-            "This freelancer is already booked at the requested date and time. Please choose a different slot.",
+            "This freelancer is already booked at one or more of the requested date and times. Please choose different slots.",
             409
         );
     }
- 
+
     let requestId;
     try {
         requestId = await bookingModel.createRequest({
             customer_id,
             freelancer_id: parseInt(freelancer_id, 10),
             requested_date,
-            requested_time,
+            requested_times: times, // Pass array of times
             max_price: max_price !== undefined ? Number(max_price) : 0,
             requirements: requirements ? requirements.trim() : "",
         });
     } catch (err) {
         if (err.message === "SLOT_NOT_AVAILABLE") {
-            throw new AppError("Slot not available", 409);
+            throw new AppError("One or more slots not available", 409);
         }
         throw err;
     }
- 
+
     res.status(201).json({
         success: true,
         message: "Booking request submitted successfully.",

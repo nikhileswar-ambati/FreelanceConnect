@@ -19,7 +19,7 @@ const hourToTime = (hour) => `${String(hour).padStart(2, "0")}:00:00`;
 
 export const BookingModal = ({ open, onClose, freelancer, onBooked }) => {
   const [date, setDate] = useState(today());
-  const [selectedHour, setSelectedHour] = useState("");
+  const [selectedHours, setSelectedHours] = useState([]); // Changed to array
   const [maxPrice, setMaxPrice] = useState("");
   const [requirements, setRequirements] = useState("");
   const [availableSlots, setAvailableSlots] = useState([]);
@@ -29,7 +29,7 @@ export const BookingModal = ({ open, onClose, freelancer, onBooked }) => {
   useEffect(() => {
     if (!open || !freelancer?.freelancer_id || !date) return;
 
-    setSelectedHour("");
+    setSelectedHours([]); // Reset to empty array
     setLoadingSlots(true);
     freelancerApi
       .getAvailability(freelancer.freelancer_id, { date })
@@ -41,16 +41,24 @@ export const BookingModal = ({ open, onClose, freelancer, onBooked }) => {
   useEffect(() => {
     if (open) {
       setDate(today());
-      setSelectedHour("");
+      setSelectedHours([]); // Reset to empty array
       setMaxPrice("");
       setRequirements("");
       setAvailableSlots([]);
     }
   }, [open]);
 
+  const toggleHour = (hour) => {
+    setSelectedHours((current) =>
+      current.includes(hour)
+        ? current.filter((item) => item !== hour)
+        : [...current, hour].sort((a, b) => a - b)
+    );
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (selectedHour === "") return;
+    if (selectedHours.length === 0) return;
 
     setSubmitting(true);
 
@@ -58,7 +66,7 @@ export const BookingModal = ({ open, onClose, freelancer, onBooked }) => {
       const payload = {
         freelancer_id: freelancer.freelancer_id,
         requested_date: date,
-        requested_time: hourToTime(Number(selectedHour)),
+        requested_times: selectedHours.map(hour => hourToTime(Number(hour))), // Send array of times
       };
 
       if (maxPrice !== "") payload.max_price = Number(maxPrice);
@@ -97,6 +105,11 @@ export const BookingModal = ({ open, onClose, freelancer, onBooked }) => {
         <div>
           <label className="text-sm font-medium text-foreground flex items-center gap-2 mb-2">
             <Clock className="h-4 w-4" /> Available slots
+            {selectedHours.length > 0 && (
+              <span className="text-xs text-muted-foreground">
+                ({selectedHours.length} selected)
+              </span>
+            )}
           </label>
 
           {loadingSlots ? (
@@ -107,21 +120,24 @@ export const BookingModal = ({ open, onClose, freelancer, onBooked }) => {
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {availableSlots.map((hour) => (
-                <button
-                  key={hour}
-                  type="button"
-                  onClick={() => setSelectedHour(hour)}
-                  className={cn(
-                    "h-10 rounded-md border text-sm font-medium transition-colors",
-                    Number(selectedHour) === Number(hour)
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-card text-foreground hover:border-primary"
-                  )}
-                >
-                  {formatHour(Number(hour))}
-                </button>
-              ))}
+              {availableSlots.map((hour) => {
+                const isSelected = selectedHours.includes(hour);
+                return (
+                  <button
+                    key={hour}
+                    type="button"
+                    onClick={() => toggleHour(hour)}
+                    className={cn(
+                      "h-10 rounded-md border text-sm font-medium transition-colors",
+                      isSelected
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-card text-foreground hover:border-primary"
+                    )}
+                  >
+                    {formatHour(Number(hour))}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
@@ -145,8 +161,8 @@ export const BookingModal = ({ open, onClose, freelancer, onBooked }) => {
           <Button type="button" variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" loading={submitting} disabled={selectedHour === ""}>
-            Send Request
+          <Button type="submit" loading={submitting} disabled={selectedHours.length === 0}>
+            Send Request {selectedHours.length > 0 && `(${selectedHours.length} slot${selectedHours.length > 1 ? 's' : ''})`}
           </Button>
         </div>
       </form>

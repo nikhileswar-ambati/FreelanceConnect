@@ -102,6 +102,17 @@ CREATE TABLE IF NOT EXISTS `booking_request` (
         ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS `booking_request_time_slots` (
+    `slot_id` INT NOT NULL AUTO_INCREMENT,
+    `request_id` INT NOT NULL,
+    `slot_hour` INT NOT NULL,
+    PRIMARY KEY (`slot_id`),
+    UNIQUE KEY `unique_request_slot` (`request_id`, `slot_hour`),
+    CONSTRAINT `fk_request_slots_request`
+        FOREIGN KEY (`request_id`) REFERENCES `booking_request` (`request_id`)
+        ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS `booking` (
     `booking_id` INT NOT NULL AUTO_INCREMENT,
     `accepted_on` DATE NULL,
