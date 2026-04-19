@@ -33,7 +33,7 @@ export const Modal = ({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
+    <div className="fixed inset-0 z-50 overflow-y-auto p-4 animate-fade-in">
       <div
         className="absolute inset-0 bg-foreground/40 backdrop-blur-sm"
         onClick={onClose}
@@ -41,7 +41,7 @@ export const Modal = ({
 
       <div
         className={cn(
-          "relative w-full bg-card rounded-xl shadow-elevated border border-border animate-scale-in",
+          "relative mx-auto my-4 flex w-full max-h-[calc(100svh-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-card shadow-elevated animate-scale-in",
           sizes[size]
         )}
       >
@@ -54,7 +54,7 @@ export const Modal = ({
         </button>
 
         {(title || description) && (
-          <div className="px-6 pt-6 pb-2">
+          <div className="shrink-0 border-b border-border/60 px-6 pt-6 pb-4 pr-14">
             {title && (
               <h2 className="text-xl font-semibold text-foreground">
                 {title}
@@ -68,7 +68,7 @@ export const Modal = ({
           </div>
         )}
 
-        <div className="px-6 py-4">{children}</div>
+        <div className="min-h-0 overflow-y-auto px-6 py-4">{children}</div>
       </div>
     </div>
   );

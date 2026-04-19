@@ -297,6 +297,7 @@ const JobRow = ({ booking, onUpdated }) => {
         open={detailsOpen}
         onClose={() => setDetailsOpen(false)}
         title="Booking request"
+        size="lg"
       >
         <div className="space-y-5">
           <BookingTimeline booking={booking} />
