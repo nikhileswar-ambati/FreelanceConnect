@@ -237,7 +237,28 @@ Customers can rate freelancers after successful booking completion.
 
 ## Screenshots
 
-(Add screenshots here)
+## Screenshots
+
+### 🏠 Home Page
+![Home](./screenshots/home.jpeg)
+
+### 📝 Registration Page
+![Register](./screenshots/1.jpeg)
+
+### 🔍 Freelancer Search
+![Search](./screenshots/2.jpeg)
+
+### 📦 My Bookings
+![Bookings](./screenshots/3.jpeg)
+
+### 📊 Freelancer Dashboard
+![Dashboard](./screenshots/4.jpeg)
+
+### ✏️ Edit Profile
+![Profile](./screenshots/5.jpeg)
+
+### ⏰ Availability Management
+![Availability](./screenshots/6.jpeg)
 
 ---
 
