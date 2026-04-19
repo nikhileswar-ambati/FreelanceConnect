@@ -7,6 +7,7 @@
   "type": "commonjs",
   "main": "src/app.js",
   "scripts": {
+    "db:sync": "node scripts/sync-schema.js",
     "dev": "node scripts/dev.js",
     "dev:backend": "nodemon src/app.js",
     "dev:frontend": "node scripts/serve-frontend.js frontend 5173",
