@@ -46,11 +46,13 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem(STORAGE_KEY);
   };
 
-  const updateUser = (patch) => {
+  const updateUser = (patch, newToken) => {
     setUser((current) => {
       if (!current) return current;
       const next = { ...current, ...patch };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ user: next, token }));
+      const t = newToken || token;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ user: next, token: t }));
+      if (newToken) setToken(newToken);
       return next;
     });
   };

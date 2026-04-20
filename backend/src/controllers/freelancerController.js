@@ -4,6 +4,7 @@ const freelancerModel = require("../models/freelancerModel");
 const availabilityModel = require("../models/availabilityModel");
 const { requireFields, isValidDate, parsePagination } = require("../utils/validators");
 const { filterPastSlots, isPastDate, isPastSlot } = require("../utils/dateTime");
+const jwt = require("jsonwebtoken");
  
 // ─────────────────────────────────────────────
 // CREATE PROFILE
@@ -30,11 +31,22 @@ exports.create = asyncHandler(async (req, res) => {
         starting_price,
         skill_id,
     });
- 
+
+    // Generate a new JWT with the freelancer_id
+    const payload = {
+        id: req.user.id,
+        user_id: req.user.id,
+        role: req.user.role,
+        customer_id: req.user.customer_id || null,
+        freelancer_id: freelancerId,
+    };
+    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1d" });
+
     res.status(201).json({
         success: true,
         message: "Freelancer profile created successfully.",
         freelancer_id: freelancerId,
+        token,
     });
 });
 

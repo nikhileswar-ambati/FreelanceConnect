@@ -87,8 +87,8 @@ const ProfileEdit = () => {
         if (form.bio !== "") payload.bio = form.bio;
 
         const response = await freelancerApi.createProfile(payload);
-        updateUser({ freelancer_id: response.freelancer_id });
-        toast.success("Profile created", "Sign in again before accepting bookings.");
+        updateUser({ freelancer_id: response.freelancer_id }, response.token);
+        toast.success("Profile created");
       }
     } catch (e) {
       setError(e.message);
